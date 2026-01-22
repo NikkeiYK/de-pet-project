@@ -1,0 +1,193 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg*
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+.venv/
+venv.bak/
+ENV.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.tmp
+*.log
+
+# Airflow
+airflow/logs/
+airflow/webserver.pid
+airflow/airflow-webserver.pid
+airflow/airflow-scheduler.pid
+airflow/airflow-worker.pid
+airflow/airflow-flower.pid
+
+# Environment variables
+.env
+.env.local
+.env.dev
+.env.test
+.env.prod
+
+# Docker
+docker-compose.override.yml
+*.log
+*.log.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and databases
+logs/
+*.log
+*.sqlite
+*.db
+
+# Project-specific
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.dylib
+*.dll
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyInstaller
+# Usually these files are written by a python script from a template
+# They are usually named something like "project_name.spec"
+# Uncomment the next line if you are using PyInstaller
+# *.spec
+
+# Distribution / packaging
+*.egg-info/
+.installed.cfg*
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyInstaller
+# https://pyinstaller.readthedocs.io/en/stable/usage.html#cleaning-up-after-pyinstaller
+build/
+dist/
+
+# PyInstaller cache
+pyinstaller/
+
+# PyInstaller spec file
+*.spec
+
+# MyPy cache
+.mypy_cache/
+
+# pytest cache
+.pytest_cache/
+
+# Celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+ENV/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  They are usually named something like "project_name.spec"
+#  Uncomment the next line if you are using PyInstaller
+# *.spec
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+*.txt
+
+# Airflow specific
+airflow/logs/
+airflow/webserver.pid
+airflow/airflow-webserver.pid
+airflow/airflow-scheduler.pid
+airflow/airflow-worker.pid
+airflow/airflow-flower.pid
+
+# You can keep .env.example, but ignore actual .env
+.env
+# Docker
+docker-compose.override.yml
+*.log
+*.log.*
+
+# Temporary files
+*.tmp
+*.temp
