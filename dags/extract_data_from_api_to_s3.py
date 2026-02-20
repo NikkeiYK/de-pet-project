@@ -1,10 +1,15 @@
-from airflow import DAG
-from airflow.models import Variable
-import duckdb
-import datetime
-from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.operators.python import PythonOperator
 import logging
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+import datetime
+from airflow.models import Variable
+from airflow import DAG
+from minio import Minio
+from minio import S3Error
+
+import io
+import requests
+import pandas as pd
 
 LAYER = 'raw'
 SOURCE = 'data-bucket'
@@ -24,38 +29,41 @@ LONG_DESCRIPTION = """
 ACCESS_KEY = Variable.get("access_key")
 SECRET_KEY = Variable.get("secret_key")
 
+client = Minio(endpoint="minio:9000", access_key=ACCESS_KEY,
+               secret_key=SECRET_KEY, secure=False)
+
 
 def get_and_transfer_api_to_s3(**context):
     try:
+
         print("Функция запущена")
         start_date, end_date = get_dates(**context)
-        logging.info(f"Start load for dates: {start_date}")
+        logging.info(f"Start load for dates: {start_date}/{end_date}")
 
-        con = duckdb.connect()
+        response = requests.get("https://fakestoreapi.com/products")
+        data = response.json()
 
-        con.sql(
-            f"""
-            SET TIMEZONE='UTC';
-            INSTALL httpfs;
-            LOAD httpfs;
-            
-            SET s3_url_style = 'path';
-            SET s3_endpoint = 'minio:9000';
-            SET S3_access_key_id = '{ACCESS_KEY}';
-            SET S3_secret_access_key = '{SECRET_KEY}';
-            SET S3_use_ssl = FALSE;
-            
-            COPY
-            (
-                SELECT 
-                    *
-                FROM read_json_auto('https://fakestoreapi.com/products')
-            ) TO 's3://{BUCKET_NAME}/{LAYER}/{SOURCE}/{start_date}/{start_date}_00-00-00.gz.parquet';
-            """
+        buffer = io.BytesIO()
+
+        df = pd.DataFrame(data)
+        df.to_parquet(buffer, engine="pyarrow", compression="snappy")
+
+        buffer.seek(0)
+
+        if not client.bucket_exists("bronze"):
+            client.make_bucket("bronze")
+
+        client.put_object(
+            bucket_name=BUCKET_NAME,
+            object_name=f"{LAYER}/{SOURCE}/{start_date}/{start_date}_00-00-00.gz.parquet",
+            data=buffer,
+            length=buffer.getbuffer().nbytes,
+            content_type="application/parquet"
         )
+
         logging.info(
             f"📦 S3 путь: {f's3://{BUCKET_NAME}/{LAYER}/{SOURCE}/{start_date}/{start_date}_00-00-00.gz.parquet'}")
-        con.close()
+
         logging.info(f"Download for date success: {start_date}")
     except Exception as e:
         logging.error(f"Ошибка: {e}")
