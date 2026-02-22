@@ -5,7 +5,6 @@ import datetime
 from airflow.models import Variable
 from airflow import DAG
 from minio import Minio
-from minio import S3Error
 
 import io
 import requests
@@ -91,3 +90,32 @@ with DAG(
     end = EmptyOperator(task_id="end")
 
     start >> api_to_s3 >> end
+
+
+# def get_and_transfer_api_to_s3(**context):
+    # start_date = context["data_interval_start"].strftime("%Y-%m-%d")
+
+    # # 1. Читаем API (БЕЗ S3 настроек!)
+    # con_api = duckdb.connect()
+    # con_api.execute("INSTALL httpfs; LOAD httpfs")
+
+    # df_api = con_api.sql("""
+    #     SELECT *, '{{ start_date }}' as load_date
+    #     FROM read_json_auto('https://fakestoreapi.com/products')
+    # """)
+
+    # # 2. S3 только для записи
+    # con_s3 = duckdb.connect()
+    # con_s3.execute("""
+    #     INSTALL httpfs; LOAD httpfs;
+    #     SET s3_endpoint='minio:9000';
+    #     SET s3_access_key_id='{{ ACCESS_KEY }}';
+    #     SET s3_secret_access_key='{{ SECRET_KEY }}';
+    #     SET s3_use_ssl=FALSE
+    # """)
+
+    # con_s3.execute(f"""
+    #     COPY df_api TO 's3://bronze/raw/data-bucket/{start_date}/{start_date}_00-00-00.parquet'
+    # """)
+
+    # logging.info(f"✅ Загружено: {len(df_api)} строк")
