@@ -30,7 +30,7 @@ with DAG(
 
     sensor = ExternalTaskSensor(
         task_id="wait_load_data_to_ods_pg",
-        allowed_states=["seccess"],
+        allowed_states=["success"],
         external_task_id="get_and_transfer_raw_to_ods_pg",
         external_dag_id="raw_from_s3_to_pg",
         poke_interval=60,
@@ -39,29 +39,29 @@ with DAG(
 
     prepare_stg = SQLExecuteQueryOperator(
         task_id="prepare_stg_layer",
-        con_id=CONNECTION_PG,
-        sql=f'''
+        conn_id=CONNECTION_PG,
+        sql=f"""
         DROP TABLE IF EXISTS {TMP_TABLE};
         
         CREATE TABLE {TMP_TABLE} AS (
-            SELECT id, TRIM(title) as name, case when price > 100 then "premium" else "Standard" end as cegmant from ods.products 
-            where price is not NULL; 
+            SELECT id, TRIM(title) as name, case when price > 100 then 'Premium' else 'Standard' end as cegmant from ods.products 
+            where price is not NULL
         )
-        '''
+        """
     )
 
     swap_stg_to_dm = SQLExecuteQueryOperator(
         task_id="swap_tmp_layer_to_dm",
         conn_id=CONNECTION_PG,
-        sql=f'''
+        sql=f"""
         BEGIN;
             ALTER TABLE IF EXISTS {TMP_TABLE} RENAME TO {TARGET_TABLE};
         
             CREATE SCHEMA IF NOT EXISTS dm;
         
-            ALTER TABLE {TMP_TABLE} SET SCHEMA dm;
+            ALTER TABLE {TARGET_TABLE} SET SCHEMA dm;
         COMMIT;
-        '''
+        """
     )
 
     end = EmptyOperator(
