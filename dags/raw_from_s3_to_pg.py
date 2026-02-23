@@ -23,7 +23,7 @@ ACCESS_KEY = Variable.get("access_key")
 SECRET_KEY = Variable.get("secret_key")
 
 PASSWORD = Variable.get("POSTGRES_PASSWORD")
-SHEMA = "ods"
+SCHEMA = "ods"
 TARGET_TABLE = "products"
 
 
@@ -60,9 +60,23 @@ def raw_from_s3_to_pg(**context):
             PASSWORD '{PASSWORD}'
         );
         
+        
+        
         ATTACH '' AS dwh_postgres_db (TYPE postgres, SECRET dwh_postgres);
         
-        INSERT INTO dwh_postgres_db.{SHEMA}.{TARGET_TABLE}
+        CREATE SCHEMA IF NOT EXISTS dwh_postgres_db.{SCHEMA};
+        
+        CREATE TABLE IF NOT EXISTS dwh_postgres_db.{SCHEMA}.{TARGET_TABLE} 
+        (
+            id INTEGER,
+            title VARCHAR,
+            price DECIMAL(10,2),
+            description VARCHAR,
+            category VARCHAR,
+            image VARCHAR
+        );
+        
+        INSERT INTO dwh_postgres_db.{SCHEMA}.{TARGET_TABLE}
         (
             id,
             title,
@@ -83,7 +97,7 @@ def raw_from_s3_to_pg(**context):
         """,
     )
     con.close()
-    print(f"✅ Загружено в PostgreSQL: {SHEMA}.{TARGET_TABLE}")
+    print(f"✅ Загружено в PostgreSQL: {SCHEMA}.{TARGET_TABLE}")
 
 
 with DAG(
@@ -93,8 +107,7 @@ with DAG(
     max_active_runs=1,
     max_active_tasks=1,
     description=SHORT_DESCRIPTION,
-    tags=["s3", "pg", "ods"],
-    catchup=False
+    tags=["s3", "pg", "ods"]
 ) as dag:
     dag.doc_md = LONG_DESCRIPTION
 
