@@ -17,7 +17,7 @@ def get_date(**context):
 
 with DAG(
     dag_id="fct_products_segment_dm",
-    schedule="@daily",
+    schedule="* * * * *",
     max_active_runs=1,
     max_active_tasks=1,
     start_date=datetime(2026, 1, 1),
@@ -58,6 +58,9 @@ with DAG(
             ALTER TABLE IF EXISTS {TMP_TABLE} RENAME TO {TARGET_TABLE};
         
             CREATE SCHEMA IF NOT EXISTS dm;
+            
+            -- Удаляем целевую таблицу, если она существует
+            DROP TABLE IF EXISTS dm.{TARGET_TABLE} CASCADE;
         
             ALTER TABLE {TARGET_TABLE} SET SCHEMA dm;
         COMMIT;

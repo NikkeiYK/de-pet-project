@@ -102,7 +102,7 @@ def raw_from_s3_to_pg(**context):
 
 with DAG(
     dag_id=DAG_ID,
-    schedule="@daily",
+    schedule="* * * * *",
     start_date=datetime(2026, 1, 1),
     max_active_runs=1,
     max_active_tasks=1,

@@ -71,7 +71,7 @@ def get_and_transfer_api_to_s3(**context):
 
 with DAG(
     dag_id=DAG_ID,
-    schedule='@daily',
+    schedule='* * * * *',
     start_date=datetime.datetime(2026, 1, 1),
     default_args={"retries": 1},
     tags=["s3", "raw"],
