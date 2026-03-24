@@ -1,3 +1,4 @@
+# Динамические распараллеленные  такски
 from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.providers.standard.operators.python import PythonOperator
