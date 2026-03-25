@@ -1,17 +1,15 @@
 # Динамические распараллеленные  такски
-from airflow import DAG
-from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.operators.python import PythonOperator
-import requests
-import pandas as pd
-import os
 import json
+import os
 from datetime import datetime, timedelta
-from airflow.utils.task_group import TaskGroup
-from airflow.decorators import task
-from airflow.models import Variable
-from airflow.hooks.base import BaseHook
 
+import requests
+from airflow import DAG
+from airflow.decorators import task
+from airflow.hooks.base import BaseHook
+from airflow.models import Variable
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.utils.task_group import TaskGroup
 
 DATA_DIR = Variable.get("DATA_DIR")
 CHUNK_SIZE = 60
@@ -46,11 +44,11 @@ def chunking_data(data, output_dir: str, chunk_size: int):
     filenames = []
 
     for idx, i in enumerate(range(0, len(data), chunk_size)):
-        chunk = data[i:i + chunk_size]
+        chunk = data[i : i + chunk_size]
         filename = f"{output_dir}/chunk_{idx + 1}.txt"
-        with open(filename, 'w', encoding="utf-8") as file:
+        with open(filename, "w", encoding="utf-8") as file:
             for el in chunk:
-                file.write(json.dumps(el) + '\n')
+                file.write(json.dumps(el) + "\n")
             filenames.append(filename)
     return filenames
 
@@ -62,23 +60,24 @@ def analyze_txt_chunk(filename: str):
 
     # Считаем строки (каждая = 1 JSON объект)
     line_count = 0
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, "r", encoding="utf-8") as f:
         line_count = sum(1 for _ in f)
 
     print(
-        f"Файл: {os.path.basename(filename)} | Размер: {size_bytes/1024/1024:.2f} MB | Строк: {line_count}")
+        f"Файл: {os.path.basename(filename)} | Размер: {size_bytes / 1024 / 1024:.2f} MB | Строк: {line_count}"
+    )
 
     return {
-        'filename': filename,
-        'size_mb': round(size_bytes / (1024*1024), 2),
-        'lines': line_count
+        "filename": filename,
+        "size_mb": round(size_bytes / (1024 * 1024), 2),
+        "lines": line_count,
     }
 
 
 @task
 def collect_result(data: list):
     for i in data:
-        print(f"Filename: {i["filename"]}, size: {i["size_mb"]}, lines: {i["lines"]}")
+        print(f"Filename: {i['filename']}, size: {i['size_mb']}, lines: {i['lines']}")
 
 
 with DAG(
@@ -86,7 +85,7 @@ with DAG(
     schedule="@once",
     catchup=False,
     start_date=datetime(2026, 3, 17),
-    tags=["example", "taskflow"]
+    tags=["example", "taskflow"],
 ) as dag:
     dag.doc_md = __doc__
 
@@ -97,7 +96,6 @@ with DAG(
     filenames = chunking_data(data, DATA_DIR, CHUNK_SIZE)
 
     with TaskGroup("analyze_chunks") as analyze_group:
-
         analyse_start = EmptyOperator(task_id="Analyse_start")
 
         result = analyze_txt_chunk.expand(filename=filenames)

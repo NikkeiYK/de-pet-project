@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py311"  # ваш Python311
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "Q", "I"]
+ignore = ["E501"]
