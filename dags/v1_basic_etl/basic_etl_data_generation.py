@@ -18,10 +18,10 @@ from faker import Faker
 load_dotenv()
 
 # Настройки
-NUM_BATCHES = 500_000
+NUM_BATCHES = 5_000
 NUM_REACTORS = 50
-NUM_SENSOR_READINGS = 10_000_000  # 10 млн показаний датчиков
-NUM_QUALITY_TESTS = 200_000
+NUM_SENSOR_READINGS = 50_000  # 10 млн показаний датчиков
+NUM_QUALITY_TESTS = 20_000
 
 DB_CONFIG = {
     "host": os.getenv("HOST"),
@@ -284,37 +284,6 @@ def generate_downtime_events(n, **context):
 
 
 def check_all_tables(**context):
-    # conn = get_connection()
-    # task_list = []
-
-    # try:
-    #     with conn.cursor() as cur:
-    #         task_store = {
-    #             "generate_reactors": "raw_reactors",
-    #             "generate_batches": "raw_batches",
-    #             "generate_quality_tests": "raw_quality_tests",
-    #             "generate_downtime_events": "raw_downtime_events",
-    #             "generate_sensor_telemetry": "raw_sensor_telemetry",
-    #         }
-
-    #         for key, val in task_store.items():
-    #             sql = f'''
-    #                 select count(*) from "raw"."{val}";
-    #             '''  # noqa: Q001
-    #             count = cur.execute(sql)
-
-    #             count = cur.fetchone()[0]
-    #             if count == 0:
-    #                 task_list.append(key)
-    #         if not task_list:
-    #             return "skip_generation"
-
-    #         return task_list
-    # except Exception as e:
-    #     print("Error", e)
-    #     return "skip_generation"
-    # finally:
-    #     conn.close()
     conn = get_connection()
     tasks_to_run = []
 
