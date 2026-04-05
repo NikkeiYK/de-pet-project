@@ -295,7 +295,8 @@ def check_all_tables(**context):
                 "generate_batches": "raw_batches",
                 "generate_quality_tests": "raw_quality_tests",
                 "generate_downtime_events": "raw_downtime_events",
-                "generate_sensor_telemetry": "raw_sensor_telemetry",
+                "generate_sensor_telemetry":"raw_sensor_telemetry",
+                "generate_catalysts": "raw_catalysts"
             }
 
             for task_name, table_name in checks.items():
@@ -351,6 +352,7 @@ def init_schemas(**context):
             sql = f'''
             create schema if not exists raw;
             create schema if not exists ods;
+            create schema if not exists dwh;
             create schema if not exists dm;
             '''  
 
@@ -360,11 +362,45 @@ def init_schemas(**context):
         print("Error", e)
     finally:
         conn.close()
+        
+def generate_catalysts(n=50, **context):
+    """Генерация справочника катализаторов"""
+    print(f"🔄 Generating {n} catalysts...")
+    
+    CATALYST_TYPES = [
+        "Ziegler-Natta ZN-1",
+        "Ziegler-Natta ZN-2",
+        "Metallocene MC-1",
+        "Metallocene MC-2",
+        "Chromium Cr-1",
+        "Vanadium V-1",
+    ]
+    
+    SUPPLIERS = ["SIBUR Catalysts", "BASF", "Dow Chemical", "Mitsui Chemicals", "INEOS"]
+    
+    data = []
+    for i in range(1, n + 1):
+        activation_date = fake.date_between(start_date="-3y", end_date="-6m")
+        data.append({
+            "catalyst_id": i,
+            "catalyst_name": f"{fake.random_element(CATALYST_TYPES)}-{i:03d}",
+            "type": fake.random_element(CATALYST_TYPES),
+            "supplier": fake.random_element(SUPPLIERS),
+            "cost_per_kg": round(random.uniform(5000, 50000), 2),
+            "activation_date": activation_date,
+            "expected_lifetime_hours": random.choice([500, 1000, 1500, 2000]),
+            "current_status": random.choice(["active", "depleted", "reserved"]),
+            "metal_content_pct": round(random.uniform(1, 10), 2),
+        })
+    
+    df = pd.DataFrame(data)
+    load_to_postgres(df, "raw_catalysts", SCHEMA)
+    print("✅ Catalysts done")
 
 
 with DAG(
     dag_id="basic_etl_data_generation",
-    schedule="@once",
+    schedule="5 * * * *",
     start_date=datetime(2026, 3, 25),
     catchup=False,
     tags=["data", "basic"],
@@ -407,6 +443,12 @@ with DAG(
         python_callable=generate_sensor_telemetry,
         op_args=[NUM_SENSOR_READINGS],
     )
+    
+    catalyst = PythonOperator(
+        task_id="generate_catalysts",
+        python_callable=generate_catalysts
+    )
+    
     # Пропуск всех стадий
     skip_tasks = EmptyOperator(task_id="skip_generation")
 
@@ -416,5 +458,5 @@ with DAG(
     check_data >> reactors
     check_data >> skip_tasks
     reactors >> batches
-    batches >> [quality_tests, downtime_events, sensor_telemetry]
-    [quality_tests, downtime_events, sensor_telemetry] >> end
+    batches >> [quality_tests, downtime_events, sensor_telemetry, catalyst]
+    [quality_tests, downtime_events, sensor_telemetry, catalyst] >> end

@@ -10,10 +10,10 @@ CONN_NAME = "postgres_dwh"
 
 with DAG(
     dag_id="trancform_raw_data_to_ods",
-    schedule="@once",
+    schedule="5 * * * *",
     tags=["basic", "transform"],
     catchup=False,
-    start_date=datetime(2026, 3, 31)
+    start_date=datetime(2026, 3, 25)
 ) as dag:
     start = EmptyOperator(task_id="start_transform_stage")
     
@@ -71,7 +71,7 @@ with DAG(
                 actual_quantity_tons decimal,
                 process_temp_avg decimal,
                 process_pressure_avg decimal,
-                catalyst_id integer,
+                catalyst_id integer references ods.ods_catalysts(catalyst_id),
                 batch_start timestamp,
                 batch_end timestamp,
                 status varchar(50),
@@ -191,11 +191,42 @@ with DAG(
                 unit,
                 timestamp::timestamp
             from raw.raw_sensor_telemetry
-            where is_anomaly = False and batch_id is not null
-            order by batch_id;
+        '''
+    )
+    
+    catalyst = SQLExecuteQueryOperator(
+        task_id="load_raw_catalysts_to_ods",
+        conn_id=CONN_NAME,
+        sql=f'''
+            create table if not exists ods.ods_catalysts (
+                catalyst_id serial primary key,
+                catalyst_name varchar,
+                type varchar,
+                supplier varchar,
+                cost_per_kg decimal,
+                activation_date timestamp,
+                expected_lifetime_hours integer,
+                current_status varchar,
+                metal_content_pct varchar
+            );
+            
+            truncate table ods.ods_catalysts cascade;
+            
+            insert into ods.ods_catalysts
+            select
+                catalyst_id,
+                catalyst_name,
+                type,
+                supplier,
+                cost_per_kg::decimal,
+                activation_date::timestamp,
+                expected_lifetime_hours,
+                current_status,
+                metal_content_pct
+            from raw.raw_catalysts;
         '''
     )
     
     end = EmptyOperator(task_id="end_transform_stage")
     
-    start >> sensor >> reactors >> batches >>  [events, tasks, telemetry] >> end
+    start >> sensor >> reactors >> catalyst >> batches >>  [events, tasks, telemetry] >> end
