@@ -1,5 +1,5 @@
+# dags/raw_from_s3_to_dwh.py
 import logging
-# import duckdb
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
@@ -42,7 +42,7 @@ def raw_from_s3_to_clickhouse(**context):
         port=8123,
         username="default",
         password=PASSWORD,
-        database="dwh"
+        database="ods"
     )
     
     init_schema = f"""

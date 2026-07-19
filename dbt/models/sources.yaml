@@ -1,15 +1,13 @@
-version: 1
+version: 2
 
 sources:
   - name: api_ods
-    database: dwh
-    schema: ods
+    database: ods
     tables:
       - name: products
         description: "Немного обработанные данные после экстракции из s3"
   - name: api_dm
-    database: dwh
-    schema: dm
+    database: dm
     tables:
       - name: products
         description: "Подготовленная для аналитики витрина данных по категориям"

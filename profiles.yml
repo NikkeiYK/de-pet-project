@@ -1,0 +1,11 @@
+de_dbt_project:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      schema: ods                    
+      host: clickhouse            
+      port: 8123
+      user: default
+      password: clickhouse
+      threads: 4

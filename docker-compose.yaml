@@ -435,15 +435,18 @@ services:
       dockerfile: Dockerfile.dbt
     image: dbt-test:latest
     container_name: dbt_runner
+    entrypoint: [""]  
     volumes:
-      - /dbt/dbt_project:/usr/app/dbt-project
-      - /dbt/prodiles.yaml:/root/.dbt/profiles.yaml
+      - ./dbt:/usr/app/dbt_project
+      - ./profiles.yml:/root/.dbt/profiles.yml
     environment:
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=8123
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=clickhouse
     command: ["tail", "-f", "/dev/null"]
+    ports:
+    - "8081:8080"
     depends_on:
       - clickhouse
     networks:
