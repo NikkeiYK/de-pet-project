@@ -23,31 +23,28 @@ A **Data Engineering pet project** implementing medallion architecture (Raw → 
   └────────┬──────────┘
            │  HTTP GET
            ▼
-  ┌───────────────────┐     ┌───────────────────┐     ┌───────────────────┐
-  │     Minio (S3)    │     │   ClickHouse ODS  │     │   ClickHouse DM   │
-  │  Parquet (Snappy) │────▶│   ods.products    │────▶│  dm_products     │  
-  │  products-catalog │     │   MergeTree       │     │  (by category)    │
-  └───────────────────┘     └───────────────────┘     └───────────────────┘
-           │                          ▲                         ▲
-           │                          │                         │
-           │              ┌───────────┴─────────────┐           │
-           │              │  Apache Airflow 3.1.6   │           │
-           │              │  CeleryExecutor         │           │
-           │              │  Redis + PostgreSQL     │           │
-           │              └─────────────────────────┘           │
-           │                          │                         │
-           │              ┌───────────┘                         │
-           │              ▼                                     │
-           │     ┌───────────────────┐                          │
-           └────▶   dbt-runner      │───────────────────────────
-                 │  stg_products     │
-                 │  dm_products      │
-                 └───────────────────┘
-
   ┌───────────────────┐
-  │   Apache Superset │
-  │   BI Dashboards   │
-  └───────────────────┘
+  │     Minio (S3)    │
+  │  Parquet (Snappy) │
+  │  products-catalog │
+  └────────┬──────────┘
+           │
+           ▼
+  ┌───────────────────┐       ┌───────────────────┐       ┌───────────────────┐
+  │   ClickHouse ODS  │       │   ClickHouse DM   │       │  Apache Superset  │
+  │   ods.products    │──────▶│  dm_products      │──────▶│  BI Dashboards    │
+  │   MergeTree       │ dbt   │  (by category)    │       │  (ClickHouse DM)  │
+  └───────────────────┘       └───────────────────┘       └───────────────────┘
+         ▲                            ▲
+         │                            │
+         └──────── dbt-runner ────────┘
+         stg_products (view) │ dm_products (table)
+
+         ┌──────────────────────────────────────────────┐
+         │          Apache Airflow 3.1.6                │
+         │          CeleryExecutor                      │
+         │          Redis + PostgreSQL                  │
+         └──────────────────────────────────────────────┘
 ```
 
 ### Data Flow
