@@ -1,112 +1,112 @@
-from airflow import DAG
-from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.operators.python import PythonOperator
-import requests
-import pandas as pd
-import os
-import json
-from datetime import datetime, timedelta
-from airflow.utils.task_group import TaskGroup
-from airflow.decorators import task
-from airflow.models import Variable
-from airflow.hooks.base import BaseHook
+# from airflow import DAG
+# from airflow.providers.standard.operators.empty import EmptyOperator
+# from airflow.providers.standard.operators.python import PythonOperator
+# import requests
+# import pandas as pd
+# import os
+# import json
+# from datetime import datetime, timedelta
+# from airflow.utils.task_group import TaskGroup
+# from airflow.decorators import task
+# from airflow.models import Variable
+# from airflow.hooks.base import BaseHook
 
 
-DATA_DIR = Variable.get("DATA_DIR")
-CHUNK_SIZE = 60
-DAG_ID = "extract_from_api_to_tmp"
-conn = BaseHook.get_connection("api_jsonplaceholder")
-BASE_URL = f"{conn.host}/posts"
+# DATA_DIR = Variable.get("DATA_DIR")
+# CHUNK_SIZE = 60
+# DAG_ID = "extract_from_api_to_tmp"
+# conn = BaseHook.get_connection("api_jsonplaceholder")
+# BASE_URL = f"{conn.host}/posts"
 
 
-@task
-def get_data(url: str):
-    try:
-        res = requests.get(url)
-        res.raise_for_status()
-        data = res.json()
-        return data
-    except requests.RequestException as e:
-        print(f"Запрос упал с ошибкой, ошибка: {e}")
-        return []
+# @task
+# def get_data(url: str):
+#     try:
+#         res = requests.get(url)
+#         res.raise_for_status()
+#         data = res.json()
+#         return data
+#     except requests.RequestException as e:
+#         print(f"Запрос упал с ошибкой, ошибка: {e}")
+#         return []
 
 
-@task
-def chunking_data(data, output_dir: str, chunk_size: int):
-    if not data:
-        print("Поступил пустой массив данных")
-        return
+# @task
+# def chunking_data(data, output_dir: str, chunk_size: int):
+#     if not data:
+#         print("Поступил пустой массив данных")
+#         return
 
-    total_chunks = (len(data) + chunk_size - 1) // chunk_size
-    print(f"Разбиваем данные длиной {len(data)} на {total_chunks} чанков.")
+#     total_chunks = (len(data) + chunk_size - 1) // chunk_size
+#     print(f"Разбиваем данные длиной {len(data)} на {total_chunks} чанков.")
 
-    os.makedirs(DATA_DIR, exist_ok=True)
+#     os.makedirs(DATA_DIR, exist_ok=True)
 
-    filenames = []
+#     filenames = []
 
-    for idx, i in enumerate(range(0, len(data), chunk_size)):
-        chunk = data[i:i + chunk_size]
-        filename = f"{output_dir}/chunk_{idx + 1}.txt"
-        with open(filename, 'w', encoding="utf-8") as file:
-            for el in chunk:
-                file.write(json.dumps(el) + '\n')
-            filenames.append(filename)
-    return filenames
-
-
-@task(sla=timedelta(minutes=2))
-def analyze_txt_chunk(filename: str):
-    """Анализирует один .txt файл - возвращает размер и строки"""
-    size_bytes = os.path.getsize(filename)
-
-    # Считаем строки (каждая = 1 JSON объект)
-    line_count = 0
-    with open(filename, 'r', encoding='utf-8') as f:
-        line_count = sum(1 for _ in f)
-
-    print(
-        f"Файл: {os.path.basename(filename)} | Размер: {size_bytes/1024/1024:.2f} MB | Строк: {line_count}")
-
-    return {
-        'filename': filename,
-        'size_mb': round(size_bytes / (1024*1024), 2),
-        'lines': line_count
-    }
+#     for idx, i in enumerate(range(0, len(data), chunk_size)):
+#         chunk = data[i:i + chunk_size]
+#         filename = f"{output_dir}/chunk_{idx + 1}.txt"
+#         with open(filename, 'w', encoding="utf-8") as file:
+#             for el in chunk:
+#                 file.write(json.dumps(el) + '\n')
+#             filenames.append(filename)
+#     return filenames
 
 
-@task
-def collect_result(data: list):
-    for i in data:
-        print(f"Filename: {i["filename"]}, size: {i["size_mb"]}, lines: {i["lines"]}")
+# @task(sla=timedelta(minutes=2))
+# def analyze_txt_chunk(filename: str):
+#     """Анализирует один .txt файл - возвращает размер и строки"""
+#     size_bytes = os.path.getsize(filename)
+
+#     # Считаем строки (каждая = 1 JSON объект)
+#     line_count = 0
+#     with open(filename, 'r', encoding='utf-8') as f:
+#         line_count = sum(1 for _ in f)
+
+#     print(
+#         f"Файл: {os.path.basename(filename)} | Размер: {size_bytes/1024/1024:.2f} MB | Строк: {line_count}")
+
+#     return {
+#         'filename': filename,
+#         'size_mb': round(size_bytes / (1024*1024), 2),
+#         'lines': line_count
+#     }
 
 
-with DAG(
-    dag_id=DAG_ID,
-    schedule="@once",
-    catchup=False,
-    start_date=datetime(2026, 3, 17),
-    tags=["example", "taskflow"]
-) as dag:
-    dag.doc_md = __doc__
+# @task
+# def collect_result(data: list):
+#     for i in data:
+#         print(f"Filename: {i["filename"]}, size: {i["size_mb"]}, lines: {i["lines"]}")
 
-    start = EmptyOperator(task_id="Start")
 
-    data = get_data(BASE_URL)
+# with DAG(
+#     dag_id=DAG_ID,
+#     schedule="@once",
+#     catchup=False,
+#     start_date=datetime(2026, 3, 17),
+#     tags=["example", "taskflow"]
+# ) as dag:
+#     dag.doc_md = __doc__
 
-    filenames = chunking_data(data, DATA_DIR, CHUNK_SIZE)
+#     start = EmptyOperator(task_id="Start")
 
-    with TaskGroup("analyze_chunks") as analyze_group:
+#     data = get_data(BASE_URL)
 
-        analyse_start = EmptyOperator(task_id="Analyse_start")
+#     filenames = chunking_data(data, DATA_DIR, CHUNK_SIZE)
 
-        result = analyze_txt_chunk.expand(filename=filenames)
+#     with TaskGroup("analyze_chunks") as analyze_group:
 
-        collection = collect_result(result)
+#         analyse_start = EmptyOperator(task_id="Analyse_start")
 
-        analyse_end = EmptyOperator(task_id="Analyse_end")
+#         result = analyze_txt_chunk.expand(filename=filenames)
 
-        analyse_start >> result >> collection >> analyse_end
+#         collection = collect_result(result)
 
-    end = EmptyOperator(task_id="End")
+#         analyse_end = EmptyOperator(task_id="Analyse_end")
 
-    start >> data >> filenames >> analyze_group >> end
+#         analyse_start >> result >> collection >> analyse_end
+
+#     end = EmptyOperator(task_id="End")
+
+#     start >> data >> filenames >> analyze_group >> end

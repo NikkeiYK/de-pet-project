@@ -1,0 +1,6 @@
+from python:3.10-slim
+WORKDIR /usr/app
+RUN pip install --no-cache-dir dbt-core dbt-clickhouse
+WORKDIR /usr/app/dbt_project
+ENTRYPOINT ["dbt"]
+CMD ["--help"]

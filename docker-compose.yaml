@@ -70,7 +70,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-duckdb minio}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-duckdb minio apache-airflow-providers-clickhousedb}
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: "/opt/airflow/config/airflow.cfg"
   volumes:
@@ -78,6 +78,7 @@ x-airflow-common: &airflow-common
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - /var/run/docker.sock:/var/run/docker.sock
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-common-depends-on
     redis:
@@ -94,10 +95,10 @@ services:
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ":9003"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9002:9000"
+      - "9003:9003"
   postgres-dwh:
     image: postgres:16
     environment:
@@ -359,6 +360,97 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: dwh
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    restart: always
+
+  clickhouse-ui:
+    image: ghcr.io/caioricciuti/ch-ui:latest
+    ports:
+      - "8081:5522"
+    environment:
+      - CLICKHOUSE_HOST=http://clickhouse:8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse
+      - CLICKHOUSE_DB=dwh
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  superset:
+    image: apache/superset:4.0.0
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=your-secret-key-here-change-me
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://superset:superset@postgres-superset/superset
+      - 'CACHE_CONFIG={"CACHE_TYPE": "RedisCache", "CACHE_REDIS_URL": "redis://redis:6379/2"}'
+    volumes:
+      - superset-data:/app/superset_home
+      - ./superset/init.sh:/app/init.sh
+    command: >
+      bash -c "
+        pip install clickhouse-connect &&
+        superset db upgrade &&
+        superset fab create-admin --username admin --firstname Admin --lastname User --email admin@example.com --password admin 2>/dev/null || true &&
+        superset init &&
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+      "
+    depends_on:
+      - redis
+      - postgres-superset
+
+  postgres-superset:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: superset
+    volumes:
+      - postgres-superset-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "superset"]
+      interval: 10s
+      retries: 5
+
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+    image: dbt-test:latest
+    container_name: dbt_runner
+    volumes:
+      - /dbt/dbt_project:/usr/app/dbt-project
+      - /dbt/prodiles.yaml:/root/.dbt/profiles.yaml
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse
+    command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      - clickhouse
+    networks:
+      - default
 
 volumes:
   postgres-db-volume:
+  clickhouse-data:
+  postgres-superset-volume:
+  superset-data:

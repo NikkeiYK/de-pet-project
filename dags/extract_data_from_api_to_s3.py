@@ -11,9 +11,10 @@ import requests
 import pandas as pd
 
 LAYER = 'raw'
-SOURCE = 'data-bucket'
+SOURCE = 'products-bucket'
+BUCKET_NAME = 'products-catalog'
+
 DAG_ID = 'EXTRACT_DATA_FROM_API_TO_S3'
-BUCKET_NAME = 'bronze'
 
 
 def get_dates(**context):
@@ -25,8 +26,8 @@ def get_dates(**context):
 LONG_DESCRIPTION = """
 Даг для переноса данных с API фейковых товаров 
 """
-ACCESS_KEY = Variable.get("access_key")
-SECRET_KEY = Variable.get("secret_key")
+ACCESS_KEY = Variable.get("products-access-key")
+SECRET_KEY = Variable.get("products-secret-key")
 
 client = Minio(endpoint="minio:9000", access_key=ACCESS_KEY,
                secret_key=SECRET_KEY, secure=False)
@@ -34,7 +35,6 @@ client = Minio(endpoint="minio:9000", access_key=ACCESS_KEY,
 
 def get_and_transfer_api_to_s3(**context):
     try:
-
         print("Функция запущена")
         start_date, end_date = get_dates(**context)
         logging.info(f"Start load for dates: {start_date}/{end_date}")
@@ -49,8 +49,8 @@ def get_and_transfer_api_to_s3(**context):
 
         buffer.seek(0)
 
-        if not client.bucket_exists("bronze"):
-            client.make_bucket("bronze")
+        if not client.bucket_exists(BUCKET_NAME):
+            client.make_bucket(BUCKET_NAME)
 
         client.put_object(
             bucket_name=BUCKET_NAME,
@@ -71,7 +71,7 @@ def get_and_transfer_api_to_s3(**context):
 
 with DAG(
     dag_id=DAG_ID,
-    schedule='* * * * *',
+    schedule='@once',
     start_date=datetime.datetime(2026, 1, 1),
     default_args={"retries": 1},
     tags=["s3", "raw"],
@@ -90,32 +90,3 @@ with DAG(
     end = EmptyOperator(task_id="end")
 
     start >> api_to_s3 >> end
-
-
-# def get_and_transfer_api_to_s3(**context):
-    # start_date = context["data_interval_start"].strftime("%Y-%m-%d")
-
-    # # 1. Читаем API (БЕЗ S3 настроек!)
-    # con_api = duckdb.connect()
-    # con_api.execute("INSTALL httpfs; LOAD httpfs")
-
-    # df_api = con_api.sql("""
-    #     SELECT *, '{{ start_date }}' as load_date
-    #     FROM read_json_auto('https://fakestoreapi.com/products')
-    # """)
-
-    # # 2. S3 только для записи
-    # con_s3 = duckdb.connect()
-    # con_s3.execute("""
-    #     INSTALL httpfs; LOAD httpfs;
-    #     SET s3_endpoint='minio:9000';
-    #     SET s3_access_key_id='{{ ACCESS_KEY }}';
-    #     SET s3_secret_access_key='{{ SECRET_KEY }}';
-    #     SET s3_use_ssl=FALSE
-    # """)
-
-    # con_s3.execute(f"""
-    #     COPY df_api TO 's3://bronze/raw/data-bucket/{start_date}/{start_date}_00-00-00.parquet'
-    # """)
-
-    # logging.info(f"✅ Загружено: {len(df_api)} строк")
